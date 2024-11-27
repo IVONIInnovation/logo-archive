@@ -4,18 +4,63 @@ import React, { useState, useMemo } from 'react';
 import { Search, Grid2x2, Grid3x3, X, ExternalLink } from 'lucide-react';
 import _ from 'lodash';
 
-// TypeScript interfaces for our components
-// These help us maintain type safety throughout the application
-interface Logo {
-  id: number;
-  name: string;
-  year: number;
-  color: string;
-  type: string;
-  imageUrl: string;
-  source: string;
+// Add error handling to our parser
+function parseLogoFromFilename(filename: string, id: number): Logo {
+  try {
+    const withoutExtension = filename.split('.')[0];
+    const [name, color, source, type, year] = withoutExtension.split('|');
+    
+    // Verify we have all parts
+    if (!name || !color || !source || !type || !year) {
+      console.warn(`Invalid filename format: ${filename}`);
+      return {
+        id,
+        name: "Invalid Logo",
+        year: 2000,
+        color: "black",
+        type: "serif",
+        imageUrl: "/logos/default.png",
+        source: "https://example.com"
+      };
+    }
+    
+    return {
+      id,
+      name: name.replace(/([A-Z])/g, ' $1').trim(),
+      year: parseInt(year) || 2000,
+      color: color.toLowerCase(),
+      type: type.toLowerCase(),
+      imageUrl: `/logos/${filename}`,
+      source: source.startsWith('www') ? `https://${source}` : source
+    };
+  } catch (error) {
+    console.error(`Error parsing filename: ${filename}`, error);
+    return {
+      id,
+      name: "Error Loading Logo",
+      year: 2000,
+      color: "black",
+      type: "serif",
+      imageUrl: "/logos/default.png",
+      source: "https://example.com"
+    };
+  }
 }
 
+// In your LogoViewer component, let's add error handling for the logo loading
+const LogoViewer = () => {
+  const logoFilenames = [
+    "BarcelonaArchives|Blue|www.arxiu.barcelona|Serif|1922.png",
+    "CatalunyaRadio|Red|www.ccma.cat|SansSerif|1983.png"
+  ];
+
+  // Add error checking when creating logos
+  const logos: Logo[] = useMemo(() => {
+    return logoFilenames.map((filename, index) => 
+      parseLogoFromFilename(filename, index + 1)
+    );
+  }, [logoFilenames]);
+  
 // Searchbar component that expands on focus
 // This creates a smooth, interactive search experience similar to Notion
 const SearchBar = ({ onSearch }: { onSearch: (term: string) => void }) => {
