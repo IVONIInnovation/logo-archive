@@ -4,65 +4,33 @@ import React, { useState, useMemo } from 'react';
 import { Search, Grid2x2, Grid3x3, X, ExternalLink } from 'lucide-react';
 import _ from 'lodash';
 
-// Add error handling to our parser
-function parseLogoFromFilename(filename: string, id: number): Logo {
-  try {
-    const withoutExtension = filename.split('.')[0];
-    const [name, color, source, type, year] = withoutExtension.split('|');
-    
-    // Verify we have all parts
-    if (!name || !color || !source || !type || !year) {
-      console.warn(`Invalid filename format: ${filename}`);
-      return {
-        id,
-        name: "Invalid Logo",
-        year: 2000,
-        color: "black",
-        type: "serif",
-        imageUrl: "/logos/default.png",
-        source: "https://example.com"
-      };
-    }
-    
-    return {
-      id,
-      name: name.replace(/([A-Z])/g, ' $1').trim(),
-      year: parseInt(year) || 2000,
-      color: color.toLowerCase(),
-      type: type.toLowerCase(),
-      imageUrl: `/logos/${filename}`,
-      source: source.startsWith('www') ? `https://${source}` : source
-    };
-  } catch (error) {
-    console.error(`Error parsing filename: ${filename}`, error);
-    return {
-      id,
-      name: "Error Loading Logo",
-      year: 2000,
-      color: "black",
-      type: "serif",
-      imageUrl: "/logos/default.png",
-      source: "https://example.com"
-    };
-  }
+// Define the structure for our logo data
+interface Logo {
+  id: number;
+  name: string;
+  year: number;
+  color: string;
+  type: string;
+  imageUrl: string;
+  source: string;
 }
 
-// In your LogoViewer component, let's add error handling for the logo loading
-const LogoViewer = () => {
-  const logoFilenames = [
-    "BarcelonaArchives|Blue|www.arxiu.barcelona|Serif|1922.png",
-    "CatalunyaRadio|Red|www.ccma.cat|SansSerif|1983.png"
-  ];
-
-  // Add error checking when creating logos
-  const logos: Logo[] = useMemo(() => {
-    return logoFilenames.map((filename, index) => 
-      parseLogoFromFilename(filename, index + 1)
-    );
-  }, [logoFilenames]);
+// Function to convert filenames into logo objects
+function parseLogoFromFilename(filename: string, id: number): Logo {
+  const withoutExtension = filename.split('.')[0];
+  const [name, color, source, type, year] = withoutExtension.split('|');
   
-// Searchbar component that expands on focus
-// This creates a smooth, interactive search experience similar to Notion
+  return {
+    id,
+    name: name.replace(/([A-Z])/g, ' $1').trim(), // Adds spaces before capital letters
+    year: parseInt(year),
+    color: color.toLowerCase(),
+    type: type.toLowerCase(),
+    imageUrl: `/logos/${filename}`,
+    source: source.startsWith('www') ? `https://${source}` : source
+  };
+}
+// SearchBar component - creates an expandable search input field
 const SearchBar = ({ onSearch }: { onSearch: (term: string) => void }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -104,13 +72,8 @@ const SearchBar = ({ onSearch }: { onSearch: (term: string) => void }) => {
     </div>
   );
 };
-
-// Grid size selector component
-// Allows users to switch between different grid layouts
-const GridSizeSelector = ({ 
-  size, 
-  onSizeChange 
-}: { 
+// GridSizeSelector component - allows switching between different grid layouts
+const GridSizeSelector = ({ size, onSizeChange }: { 
   size: number; 
   onSizeChange: (size: number) => void 
 }) => {
@@ -138,13 +101,8 @@ const GridSizeSelector = ({
     </div>
   );
 };
-
-// Color selector component with proper styling
-// Uses Tailwind classes for consistent styling
-const ColorSelector = ({ 
-  selectedColor, 
-  onColorSelect 
-}: { 
+// ColorSelector component - provides color filtering options
+const ColorSelector = ({ selectedColor, onColorSelect }: { 
   selectedColor: string; 
   onColorSelect: (color: string) => void 
 }) => {
@@ -171,12 +129,8 @@ const ColorSelector = ({
   );
 };
 
-// Typography selector component
-// Allows switching between serif and sans-serif options
-const TypographySelector = ({ 
-  selected, 
-  onSelect 
-}: { 
+// TypographySelector component - allows switching between font styles
+const TypographySelector = ({ selected, onSelect }: { 
   selected: string; 
   onSelect: (type: string) => void 
 }) => (
@@ -203,8 +157,7 @@ const TypographySelector = ({
     </button>
   </div>
 );
-// Logo card component with modal functionality
-// Displays individual logo items with hover effects and detailed view
+// LogoCard component - displays individual logo items with modal functionality
 const LogoCard = ({ logo }: { logo: Logo }) => {
   const [showModal, setShowModal] = useState(false);
 
@@ -287,9 +240,9 @@ const LogoCard = ({ logo }: { logo: Logo }) => {
     </>
   );
 };
-// Main page component that brings everything together
-export default function Page() {
-  // State management for filters and grid layout
+// Main LogoViewer component that brings everything together
+const LogoViewer = () => {
+  // State management for our filters and grid layout
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({ color: '', type: '' });
   const [gridSize, setGridSize] = useState(8);
@@ -301,37 +254,16 @@ export default function Page() {
     return year >= decadeStart && year <= decadeEnd;
   };
   
-  // Sample data - replace with your actual data source
-  // Add this function right before your LogoViewer component
-function parseLogoFromFilename(filename: string, id: number): Logo {
-  // Remove the file extension (.png, .jpg, etc.)
-  const withoutExtension = filename.split('.')[0];
-  
-  // Split the remaining string at each | character
-  const [name, color, source, type, year] = withoutExtension.split('|');
-  
-  // Create and return a Logo object with the parsed information
-  return {
-    id,
-    name: name.replace(/([A-Z])/g, ' $1').trim(), // Add spaces before capital letters
-    year: parseInt(year),
-    color: color.toLowerCase(),
-    type: type.toLowerCase(),
-    imageUrl: `/logos/${filename}`, // Assuming images are in the public/logos directory
-    source: source.startsWith('www') ? `https://${source}` : source
-  };
-}
+  // Our logo filenames following the pattern: Name|Color|Website|Type|Year.png
+  const logoFilenames = [
+    "BarcelonaArchives|Blue|www.arxiu.barcelona|Serif|1922.png",
+    "CatalunyaRadio|Red|www.ccma.cat|SansSerif|1983.png"
+  ];
 
-// Inside your LogoViewer component, replace the old logos array with this:
-const logoFilenames = [
-  "BarcelonaArchives|Blue|www.arxiu.barcelona|Serif|1922.png",
-  "CatalunyaRadio|Red|www.ccma.cat|SansSerif|1983.png"
-];
-
-// Convert filenames into Logo objects
-const logos: Logo[] = logoFilenames.map((filename, index) => 
-  parseLogoFromFilename(filename, index + 1)
-);
+  // Convert filenames into Logo objects
+  const logos: Logo[] = logoFilenames.map((filename, index) => 
+    parseLogoFromFilename(filename, index + 1)
+  );
 
   // Create a debounced search function to improve performance
   const debouncedSearch = useMemo(
@@ -398,9 +330,7 @@ const logos: Logo[] = logoFilenames.map((filename, index) =>
         </div>
       </div>
 
-      {/* Main content area with responsive grid layout */}
       <main className="max-w-[1600px] mx-auto px-4 py-6">
-        {/* Dynamic grid that changes based on selected grid size */}
         <div className={`grid gap-6 ${
           gridSize === 4 
             ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
@@ -411,7 +341,6 @@ const logos: Logo[] = logoFilenames.map((filename, index) =>
           ))}
         </div>
         
-        {/* Empty state message when no logos match the filters */}
         {filteredLogos.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             No matching logos found
@@ -420,4 +349,7 @@ const logos: Logo[] = logoFilenames.map((filename, index) =>
       </main>
     </div>
   );
-}
+};
+
+// Export the LogoViewer as the default component for this page
+export default LogoViewer;
