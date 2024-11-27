@@ -257,26 +257,36 @@ export default function Page() {
   };
   
   // Sample data - replace with your actual data source
-  const logos: Logo[] = [
-    {
-      id: 1,
-      name: "Barcelona Archives",
-      year: 1922,
-      color: "blue",
-      type: "serif",
-      imageUrl: "/api/placeholder/400/400",
-      source: "https://arxiu.barcelona"
-    },
-    {
-      id: 2,
-      name: "Catalunya Radio",
-      year: 1983,
-      color: "red",
-      type: "sans-serif",
-      imageUrl: "/api/placeholder/400/400",
-      source: "https://ccma.cat"
-    }
-  ];
+  // Add this function right before your LogoViewer component
+function parseLogoFromFilename(filename: string, id: number): Logo {
+  // Remove the file extension (.png, .jpg, etc.)
+  const withoutExtension = filename.split('.')[0];
+  
+  // Split the remaining string at each | character
+  const [name, color, source, type, year] = withoutExtension.split('|');
+  
+  // Create and return a Logo object with the parsed information
+  return {
+    id,
+    name: name.replace(/([A-Z])/g, ' $1').trim(), // Add spaces before capital letters
+    year: parseInt(year),
+    color: color.toLowerCase(),
+    type: type.toLowerCase(),
+    imageUrl: `/logos/${filename}`, // Assuming images are in the public/logos directory
+    source: source.startsWith('www') ? `https://${source}` : source
+  };
+}
+
+// Inside your LogoViewer component, replace the old logos array with this:
+const logoFilenames = [
+  "BarcelonaArchives|Blue|www.arxiu.barcelona|Serif|1922.png",
+  "CatalunyaRadio|Red|www.ccma.cat|SansSerif|1983.png"
+];
+
+// Convert filenames into Logo objects
+const logos: Logo[] = logoFilenames.map((filename, index) => 
+  parseLogoFromFilename(filename, index + 1)
+);
 
   // Create a debounced search function to improve performance
   const debouncedSearch = useMemo(
