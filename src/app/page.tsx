@@ -1,611 +1,368 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Phone, 
-  Globe, 
-  Linkedin, 
-  Circle, 
-  ChevronRight, 
-  ChevronDown, 
-  ArrowLeft, 
-  MapPin,
-  Menu,
-  Share2,
-  Info,
-  X,
-  ExternalLink,
-  Mail as MailIcon // Updated this line
-} from 'lucide-react';
-import { Plus_Jakarta_Sans, Space_Grotesk, Roboto_Mono } from 'next/font/google';
+import React, { useState, useMemo } from 'react';
+import { Search, Grid2x2, Grid3x3, X, ExternalLink } from 'lucide-react';
+import _ from 'lodash';
 
-const plusJakartaSans = Plus_Jakarta_Sans({ 
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '500', '600'],
-  variable: '--font-plus-jakarta-sans',
-});
+// TypeScript interfaces for our components
+// These help us maintain type safety throughout the application
+interface Logo {
+  id: number;
+  name: string;
+  year: number;
+  color: string;
+  type: string;
+  imageUrl: string;
+  source: string;
+}
 
-const spaceGrotesk = Space_Grotesk({ 
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '500'],
-  variable: '--font-space-grotesk',
-});
+// Searchbar component that expands on focus
+// This creates a smooth, interactive search experience similar to Notion
+const SearchBar = ({ onSearch }: { onSearch: (term: string) => void }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
-const robotoMono = Roboto_Mono({ 
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400'],
-  variable: '--font-roboto-mono',
-});
-
-type View = 'home' | 'about' | 'share' | 'contact';
-type Location = 'UK' | 'ES' | null;
-type Language = 'en' | 'es' | 'cat';
-export default function Home() {
-  const [isFlipping, setIsFlipping] = useState(false);
-  const [showWebsites, setShowWebsites] = useState(false);
-  const [themeIndex, setThemeIndex] = useState(0);
-  const [ukTime, setUkTime] = useState('');
-  const [esTime, setEsTime] = useState('');
-  const [showScrollIndicator, setShowScrollIndicator] = useState(true);
-  const [showLocation, setShowLocation] = useState<Location>(null);
-  const [currentLanguage, setCurrentLanguage] = useState<Language>('en');
-  const [currentView, setCurrentView] = useState<View>('home');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const websitesRef = useRef(null);
-  const flipTimeoutRef = useRef(null);
-
-  const themes = [
-    'from-gray-200 via-gray-100 to-gray-200',
-    'from-zinc-800 to-zinc-900',
-    'from-indigo-500 to-violet-500',
-    'from-emerald-500 to-teal-500',
-    'from-orange-500 to-amber-500'
-  ];
-
-  const cardBg = themeIndex === 0 
-    ? 'bg-gradient-to-br from-gray-600/80 to-gray-700/80' 
-    : 'bg-gradient-to-br from-white/10 to-white/20';
-  const translations = {
-    en: {
-      title: 'Brand Development • Design • Web',
-      seeAll: 'see all',
-      scroll: 'scroll',
-      about: 'About',
-      share: 'Share',
-      contact: 'Contact',
-      copyLink: 'Copy Link',
-      linkCopied: 'Link Copied!',
-      shareProfile: 'Share Profile',
-      location: {
-        uk: 'York, UK',
-        es: 'Barcelona, Spain'
-      }
-    },
-    es: {
-      title: 'Desarrollo de Marca • Diseño • Web',
-      seeAll: 'ver todo',
-      scroll: 'desplazar',
-      about: 'Sobre mí',
-      share: 'Compartir',
-      contact: 'Contacto',
-      copyLink: 'Copiar enlace',
-      linkCopied: '¡Enlace copiado!',
-      shareProfile: 'Compartir Perfil',
-      location: {
-        uk: 'York, Reino Unido',
-        es: 'Barcelona, España'
-      }
-    },
-    cat: {
-      title: 'Desenvolupament de Marca • Disseny • Web',
-      seeAll: 'veure tot',
-      scroll: 'desplaçar',
-      about: 'Sobre mi',
-      share: 'Compartir',
-      contact: 'Contacte',
-      copyLink: 'Copiar enllaç',
-      linkCopied: 'Enllaç copiat!',
-      shareProfile: 'Compartir Perfil',
-      location: {
-        uk: 'York, Regne Unit',
-        es: 'Barcelona, Espanya'
-      }
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+    onSearch(e.target.value);
   };
 
-  const websites = [
-    {
-      name: 'kaiswanborough.com',
-      description: 'Freelance',
-      url: 'https://kaiswanborough.com',
-      priority: 1
-    },
-    {
-      name: 'IVONI',
-      links: [
-        { text: '.org', url: 'https://ivoni.org' },
-        { text: '.es', url: 'https://ivoni.es' },
-        { text: '.cat', url: 'https://ivoni.cat' }
-      ],
-      description: 'Company',
-      priority: 1
-    },
-    {
-      name: 'agenciamira.es',
-      description: 'BCN Agency',
-      url: 'https://agenciamira.es',
-      priority: 1
-    },
-    {
-      name: 'globaloffset.co',
-      description: 'Startup',
-      url: 'https://globaloffset.co',
-      priority: 1
-    },
-    {
-      name: 'portaldiseno.es',
-      description: 'Uni Portfolio',
-      url: 'https://portaldiseno.es',
-      priority: 2
-    },
-    {
-      name: 'extraccion.net',
-      description: 'Scholarship Project',
-      url: 'https://extraccion.net',
-      priority: 2
-    },
-    {
-      name: 'mirafest.es',
-      description: 'Festival',
-      url: 'https://mirafest.es',
-      priority: 2
-    }
-  ];
-  const handleLinkClick = (e: React.MouseEvent, url: string) => {
-    e.stopPropagation();
-    window.open(url, '_blank');
-  };
-
-  const handleWebsitesClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowWebsites(!showWebsites);
-  };
-
-  const handleScroll = () => {
-    if (websitesRef.current) {
-      const { scrollTop } = websitesRef.current;
-      if (scrollTop > 20) {
-        setShowScrollIndicator(false);
-      } else {
-        setShowScrollIndicator(true);
-      }
-    }
-  };
-
-  const handleViewChange = (view: View) => {
-    setIsMenuOpen(false);
-    if (currentView !== view) {
-      setIsFlipping(true);
-      setCurrentView(view);
-      setTimeout(() => {
-        setIsFlipping(false);
-      }, 300);
-    }
-  };
-
-  const handleTimeClick = (location: Location) => {
-    setShowLocation(prev => prev === location ? null : location);
-    setTimeout(() => setShowLocation(null), 2000);
-  };
-
-  const handleLanguageChange = () => {
-    setCurrentLanguage(prev => {
-      if (prev === 'en') return 'es';
-      if (prev === 'es') return 'cat';
-      return 'en';
-    });
-  };
-
-  const handleMenuToggle = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const handleShareLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy link:', err);
-    }
-  };
-  const ShareView = () => (
-    <div className="h-full p-5 flex flex-col items-center justify-center">
-      <button 
-        onClick={() => handleViewChange('home')}
-        className="absolute top-3 left-3 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4 text-white/70" />
-      </button>
-      
-      <div className="text-center space-y-4">
-        <div className="space-y-2">
-          <h2 className="text-lg font-medium text-white">
-            {translations[currentLanguage].shareProfile}
-          </h2>
-          <p className="text-xs text-white/70">{window.location.href}</p>
-        </div>
-        
-        <button
-          onClick={handleShareLink}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-xs"
-        >
-          <ExternalLink className="w-3 h-3 text-white/70" />
-          <span className="text-white/90">
-            {copied 
-              ? translations[currentLanguage].linkCopied 
-              : translations[currentLanguage].copyLink}
-          </span>
-        </button>
-      </div>
-    </div>
-  );
-
-  const AboutView = () => (
-    <div className="h-full p-5">
-      <button 
-        onClick={() => handleViewChange('home')}
-        className="absolute top-3 left-3 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4 text-white/70" />
-      </button>
-
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-lg font-medium tracking-tight text-white font-plus-jakarta-sans">
-            Kai Swanborough
-          </h1>
-          <p className="text-xs font-regular text-white/80 font-roboto-mono tracking-tight">
-            {translations[currentLanguage].title}
-          </p>
-        </div>
-
-        <div className="text-xs text-white/90 font-space-grotesk">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-3 h-3" />
-              <span>{translations[currentLanguage].location.uk}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>{translations[currentLanguage].location.es}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="h-full overflow-y-auto space-y-1.5">
-          <div className="flex items-center justify-between py-1.5 px-3 bg-white/5 rounded-lg">
-            <span className="text-xs text-white/70">BeVisioneers: Mercedes-Benz Fellowship</span>
-            <span className="text-xs text-white/50">Fellow 24/25</span>
-          </div>
-          <div className="flex items-center justify-between py-1.5 px-3 bg-white/5 rounded-lg">
-            <span className="text-xs text-white/70">ADG-FAD</span>
-            <span className="text-xs text-white/50">Member</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-const ContactView = () => (
-    <div className="h-full p-5">
-      <button 
-        onClick={() => handleViewChange('home')}
-        className="absolute top-3 left-3 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4 text-white/70" />
-      </button>
-
-      <div className="space-y-0.5 mb-5">
-        <h1 className="text-lg font-medium tracking-tight text-white font-plus-jakarta-sans">
-          Kai Swanborough
-        </h1>
-        <p className="text-xs font-regular text-white/80 font-roboto-mono tracking-tight">
-          {translations[currentLanguage].title}
-        </p>
-      </div>
-
-      <div className="space-y-1.5 text-xs text-white/90 font-space-grotesk">
-        <div 
-          className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
-          onClick={(e) => handleLinkClick(e, 'tel:+447592660717')}
-        >
-          <Phone className="w-3 h-3" />
-          <span>UK (+44) 7592 660717</span>
-        </div>
-        <div 
-          className="flex items-center gap-2 ml-5 cursor-pointer hover:text-white transition-colors"
-          onClick={(e) => handleLinkClick(e, 'tel:+34649058386')}
-        >
-          <span>ES (+34) 649 058 386</span>
-        </div>
-        <div 
-          className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
-          onClick={(e) => handleLinkClick(e, 'mailto:kai@kswanborough.com')}
-        >
-          <MailIcon className="w-3 h-3" />
-          <span>kai@kswanborough.com</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  const MenuPanel = () => (
-    <div className="w-full flex items-center justify-center">
-      <div className="flex items-center gap-4">
-        {['about', 'share', 'contact'].map((view) => (
-          <button
-            key={view}
-            onClick={() => handleViewChange(view as View)}
-            className="text-xs text-gray-800/70 hover:text-gray-800 transition-colors"
-          >
-            {translations[currentLanguage][view as keyof typeof translations[typeof currentLanguage]]}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  useEffect(() => {
-    const updateTimes = () => {
-      setUkTime(new Date().toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        timeZone: 'Europe/London' 
-      }));
-      setEsTime(new Date().toLocaleTimeString('en-GB', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        timeZone: 'Europe/Madrid' 
-      }));
-    };
-    updateTimes();
-    const interval = setInterval(updateTimes, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (flipTimeoutRef.current) {
-        clearTimeout(flipTimeoutRef.current);
-      }
-    };
-  }, []);
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${themes[themeIndex]} transition-all duration-1000 flex flex-col items-center justify-center gap-8 p-6 ${plusJakartaSans.variable} ${spaceGrotesk.variable} ${robotoMono.variable} font-sans`}>
-      <div className="w-80 h-48 [perspective:1000px]">
-        <div 
-          className={`relative w-full h-full transition-all duration-300 ease-in-out [transform-style:preserve-3d] ${
-            isFlipping ? '[transform:rotateY(90deg)]' : '[transform:rotateY(0deg)]'
-          }`}
+    <div className={`relative transition-all duration-200 ${
+      isExpanded ? 'w-64' : 'w-36'
+    }`}>
+      <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+        <Search size={14} />
+      </div>
+      <input
+        type="text"
+        value={searchValue}
+        className="w-full pl-8 pr-8 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg 
+                   text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-600"
+        placeholder={isExpanded ? "Search name or year..." : "Search"}
+        onChange={handleChange}
+        onFocus={() => setIsExpanded(true)}
+        onBlur={() => !searchValue && setIsExpanded(false)}
+      />
+      {searchValue && (
+        <button
+          onClick={() => {
+            setSearchValue('');
+            onSearch('');
+            setIsExpanded(false);
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
         >
-          <div className="absolute w-full h-full rounded-xl overflow-hidden ring-2 ring-white/30">
-            <div className={`absolute inset-0 ${cardBg} backdrop-blur-xl`} />
-            
-            <div className="relative h-full">
-              {currentView === 'home' && (
-                <div className="relative h-full p-5">
-                  <div className="space-y-0.5">
-                    <h1 className="text-lg font-medium tracking-tight text-white font-plus-jakarta-sans">
-                      Kai Swanborough
-                    </h1>
-                    <p className="text-xs font-regular text-white/80 font-roboto-mono tracking-tight">
-                      {translations[currentLanguage].title}
-                    </p>
-                  </div>
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+};
 
-                  <div className="mt-5 space-y-1.5 text-xs text-white/90 font-space-grotesk">
-                    <div 
-                      className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
-                      onClick={(e) => handleLinkClick(e, 'tel:+447592660717')}
-                    >
-                      <Phone className="w-3 h-3" />
-                      <span>UK (+44) 7592 660717</span>
-                    </div>
-                    <div 
-                      className="flex items-center gap-2 ml-5 cursor-pointer hover:text-white transition-colors"
-                      onClick={(e) => handleLinkClick(e, 'tel:+34649058386')}
-                    >
-                      <span>ES (+34) 649 058 386</span>
-                    </div>
-                    <div 
-                      className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
-                      onClick={handleWebsitesClick}
-                    >
-                      <Globe className="w-3 h-3" />
-                      <span>kaiswanborough.com ({translations[currentLanguage].seeAll})</span>
-                    </div>
-                    <div 
-                      className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
-                      onClick={(e) => handleLinkClick(e, 'https://linkedin.com/in/kaiswanborough')}
-                    >
-                      <Linkedin className="w-3 h-3" />
-                      <span>in/kaiswanborough</span>
-                    </div>
-                  </div>
+// Grid size selector component
+// Allows users to switch between different grid layouts
+const GridSizeSelector = ({ 
+  size, 
+  onSizeChange 
+}: { 
+  size: number; 
+  onSizeChange: (size: number) => void 
+}) => {
+  const sizes = [
+    { id: 4, icon: Grid3x3, label: '4 per row' },
+    { id: 8, icon: Grid2x2, label: '8 per row' }
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {sizes.map(({ id, icon: Icon, label }) => (
+        <button
+          key={id}
+          onClick={() => onSizeChange(id)}
+          className={`p-1.5 rounded-lg transition-colors ${
+            size === id
+              ? 'bg-gray-700 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+          title={label}
+        >
+          <Icon size={16} />
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Color selector component with proper styling
+// Uses Tailwind classes for consistent styling
+const ColorSelector = ({ 
+  selectedColor, 
+  onColorSelect 
+}: { 
+  selectedColor: string; 
+  onColorSelect: (color: string) => void 
+}) => {
+  const colors = [
+    { id: 'blue', bg: 'bg-blue-600' },
+    { id: 'red', bg: 'bg-red-600' },
+    { id: 'black', bg: 'bg-black' },
+    { id: 'white', bg: 'bg-white border border-gray-700' }
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {colors.map(({ id, bg }) => (
+        <button
+          key={id}
+          onClick={() => onColorSelect(selectedColor === id ? '' : id)}
+          className={`w-6 h-6 rounded-lg transition-transform ${bg} ${
+            selectedColor === id ? 'scale-95 ring-2 ring-gray-400' : 'hover:scale-105'
+          }`}
+          title={id.charAt(0).toUpperCase() + id.slice(1)}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Typography selector component
+// Allows switching between serif and sans-serif options
+const TypographySelector = ({ 
+  selected, 
+  onSelect 
+}: { 
+  selected: string; 
+  onSelect: (type: string) => void 
+}) => (
+  <div className="flex gap-2">
+    <button
+      onClick={() => onSelect(selected === 'serif' ? '' : 'serif')}
+      className={`px-3 py-1 rounded-lg transition-colors ${
+        selected === 'serif'
+          ? 'bg-gray-700 text-white'
+          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      }`}
+    >
+      <span className="font-serif">Aa</span>
+    </button>
+    <button
+      onClick={() => onSelect(selected === 'sans-serif' ? '' : 'sans-serif')}
+      className={`px-3 py-1 rounded-lg transition-colors ${
+        selected === 'sans-serif'
+          ? 'bg-gray-700 text-white'
+          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      }`}
+    >
+      <span className="font-sans">Aa</span>
+    </button>
+  </div>
+);
+// Logo card component with modal functionality
+// Displays individual logo items with hover effects and detailed view
+const LogoCard = ({ logo }: { logo: Logo }) => {
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <>
+      <div 
+        onClick={() => setShowModal(true)}
+        className="group relative bg-gray-800 rounded-lg overflow-hidden transition-all hover:shadow-lg border border-gray-700/50 hover:border-gray-600/50 cursor-pointer"
+      >
+        <div className="aspect-square w-full relative">
+          <div className="absolute inset-0 flex items-center justify-center p-4 bg-gray-900">
+            <img
+              src={logo.imageUrl}
+              alt={logo.name}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-0 w-full p-4 text-white">
+            <h3 className="text-sm font-medium mb-1">{logo.name}</h3>
+            <div className="flex gap-2 text-xs text-gray-300">
+              <span>{logo.year}</span>
+              <span>•</span>
+              <span>{logo.type}</span>
+            </div>
+            <a 
+              href={logo.source}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-2"
+            >
+              {new URL(logo.source).hostname}
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="max-w-4xl w-full mx-4 bg-gray-800 rounded-lg border border-gray-700/50 shadow-xl">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-xl font-medium text-white mb-2">{logo.name}</h2>
+                  <p className="text-sm text-gray-300">{logo.year} • {logo.type}</p>
+                  <a 
+                    href={logo.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-1"
+                  >
+                    Source
+                    <ExternalLink size={12} />
+                  </a>
                 </div>
-              )}
-
-              {currentView === 'about' && <AboutView />}
-              {currentView === 'share' && <ShareView />}
-              {currentView === 'contact' && <ContactView />}
-              {/* Website Grid Overlay */}
-              <div 
-                className={`absolute inset-0 bg-gradient-to-br from-gray-800/95 to-gray-900/95 backdrop-blur-2xl rounded-xl transition-all duration-300 ${
-                  showWebsites ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div 
-                  ref={websitesRef}
-                  onScroll={handleScroll}
-                  className="h-full overflow-y-auto px-5 pt-5 pb-12"
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <div className="space-y-4 relative">
-                    {/* Main websites */}
-                    <div className="space-y-2.5">
-                      {websites.filter(w => w.priority === 1).map((site, i) => (
-                        <div key={i} className="group">
-                          {site.links ? (
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3">
-                                <Circle className="w-1.5 h-1.5 text-white/40" />
-                                <span className="text-sm text-white font-space-grotesk">{site.name}</span>
-                                {site.links.map((link, j) => (
-                                  <span
-                                    key={j}
-                                    onClick={(e) => handleLinkClick(e, link.url)}
-                                    className="text-sm text-white/70 font-space-grotesk hover:text-white/90 transition-colors cursor-pointer"
-                                  >
-                                    {link.text}
-                                  </span>
-                                ))}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <ChevronRight className="w-3 h-3 text-white/30" />
-                                <span className="text-xs text-white/50 font-space-grotesk">{site.description}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div 
-                              className="flex items-center justify-between gap-3 cursor-pointer"
-                              onClick={(e) => handleLinkClick(e, site.url)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Circle className="w-1.5 h-1.5 text-white/40" />
-                                <span className="text-sm text-white font-space-grotesk group-hover:text-white/80 transition-colors">{site.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <ChevronRight className="w-3 h-3 text-white/30 group-hover:text-white/50 transition-colors" />
-                                <span className="text-xs text-white/50 font-space-grotesk group-hover:text-white/70 transition-colors">{site.description}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Border divider */}
-                    <div className="border-t border-white/10" />
-
-                    {/* Secondary websites */}
-                    <div className="space-y-2.5">
-                      {websites.filter(w => w.priority === 2).map((site, i) => (
-                        <div 
-                          key={i}
-                          className="flex items-center justify-between gap-3 group cursor-pointer"
-                          onClick={(e) => handleLinkClick(e, site.url)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Circle className="w-1.5 h-1.5 text-white/20" />
-                            <span className="text-sm text-white/70 font-space-grotesk group-hover:text-white/90 transition-colors">{site.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <ChevronRight className="w-3 h-3 text-white/20 group-hover:text-white/40 transition-colors" />
-                            <span className="text-xs text-white/40 font-space-grotesk group-hover:text-white/60 transition-colors">{site.description}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Scroll indicator */}
-                <div className={`absolute bottom-0 left-0 right-0 h-8 pointer-events-none transition-opacity duration-300 ${showScrollIndicator ? 'opacity-100' : 'opacity-0'}`}>
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent" />
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                    <div className="px-1.5 py-0.5 rounded-full bg-white/5 backdrop-blur-sm flex items-center gap-0.5">
-                      <span className="text-[8px] text-white/50">{translations[currentLanguage].scroll}</span>
-                      <ChevronDown className="w-1.5 h-1.5 text-white/50" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Back button */}
-                <button 
-                  onClick={() => setShowWebsites(false)}
-                  className="absolute top-3 left-3 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4 text-white/70" />
+                  <X size={20} />
                 </button>
               </div>
+              <div className="flex items-center justify-center bg-gray-900 rounded-lg p-8">
+                <img
+                  src={logo.imageUrl}
+                  alt={logo.name}
+                  className="max-w-full max-h-[60vh] object-contain"
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Rights respective of owner of logo and image - This is an educational tool only
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+// Main page component that brings everything together
+export default function Page() {
+  // State management for filters and grid layout
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({ color: '', type: '' });
+  const [gridSize, setGridSize] = useState(8);
+
+  // Helper function to check if a year falls within a decade
+  const isInDecade = (year: number, searchYear: number): boolean => {
+    const decadeStart = Math.floor(searchYear / 10) * 10;
+    const decadeEnd = decadeStart + 9;
+    return year >= decadeStart && year <= decadeEnd;
+  };
+  
+  // Sample data - replace with your actual data source
+  const logos: Logo[] = [
+    {
+      id: 1,
+      name: "Barcelona Archives",
+      year: 1922,
+      color: "blue",
+      type: "serif",
+      imageUrl: "/api/placeholder/400/400",
+      source: "https://arxiu.barcelona"
+    },
+    {
+      id: 2,
+      name: "Catalunya Radio",
+      year: 1983,
+      color: "red",
+      type: "sans-serif",
+      imageUrl: "/api/placeholder/400/400",
+      source: "https://ccma.cat"
+    }
+  ];
+
+  // Create a debounced search function to improve performance
+  const debouncedSearch = useMemo(
+    () => _.debounce((term: string) => setSearchTerm(term), 300),
+    []
+  );
+
+  // Cleanup debounced function on component unmount
+  React.useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  // Filter logos based on search term and selected filters
+  const filteredLogos = useMemo(() => {
+    return logos.filter(logo => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Check if search term is a year
+      const searchYear = parseInt(searchTerm);
+      const yearMatch = !isNaN(searchYear) ? isInDecade(logo.year, searchYear) : false;
+      
+      const matchesSearch = 
+        logo.name.toLowerCase().includes(searchLower) ||
+        yearMatch;
+      const matchesColor = !filters.color || logo.color === filters.color;
+      const matchesType = !filters.type || logo.type === filters.type;
+      
+      return matchesSearch && matchesColor && matchesType;
+    });
+  }, [searchTerm, filters, logos]);
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="sticky top-0 py-4 bg-gray-900/95 backdrop-blur-sm z-50">
+        <div className="max-w-[1600px] mx-auto px-4">
+          <div className="bg-gray-800 rounded-lg border border-gray-700/50 shadow-lg p-4">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <SearchBar onSearch={debouncedSearch} />
+                <div className="flex items-center gap-6">
+                  <ColorSelector
+                    selectedColor={filters.color}
+                    onColorSelect={(color) => setFilters({ ...filters, color })}
+                  />
+                  <div className="w-px h-6 bg-gray-700/50" />
+                  <TypographySelector
+                    selected={filters.type}
+                    onSelect={(type) => setFilters({ ...filters, type })}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <GridSizeSelector size={gridSize} onSizeChange={setGridSize} />
+                <div className="w-px h-6 bg-gray-700/50" />
+                <div className="text-sm text-gray-300">
+                  PortalDiseno.es - University Project
+                  <img src="/api/placeholder/24/24" alt="Logo" className="inline-block ml-2 w-6 h-6" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Control Panel */}
-      <div className="relative bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-8">
-        {!isMenuOpen ? (
-          <>
-            <div 
-              onClick={() => setThemeIndex((prev) => (prev + 1) % themes.length)}
-              className={`w-4 h-4 rounded-full transition-all duration-300 bg-gradient-to-br ${themes[themeIndex]} hover:scale-110 cursor-pointer ring-1 ring-black/10 hover:ring-black/20 shadow-sm`}
-            />
-            <div className="flex items-center gap-6">
-              <div 
-                className="flex items-center cursor-pointer relative"
-                onClick={() => handleTimeClick('UK')}
-              >
-                <span className="font-roboto-mono text-sm font-medium tracking-tight text-gray-800/70">{ukTime}</span>
-                {showLocation === 'UK' && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-xs rounded-md whitespace-nowrap flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{translations[currentLanguage].location.uk}</span>
-                  </div>
-                )}
-              </div>
-              <div className="w-px h-3 bg-gray-400/20" />
-              <div 
-                className="flex items-center cursor-pointer relative"
-                onClick={() => handleTimeClick('ES')}
-              >
-                <span className="font-roboto-mono text-sm font-medium tracking-tight text-gray-800/70">{esTime}</span>
-                {showLocation === 'ES' && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-xs rounded-md whitespace-nowrap flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{translations[currentLanguage].location.es}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <MenuPanel />
+      {/* Main content area with responsive grid layout */}
+      <main className="max-w-[1600px] mx-auto px-4 py-6">
+        {/* Dynamic grid that changes based on selected grid size */}
+        <div className={`grid gap-6 ${
+          gridSize === 4 
+            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4' 
+            : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8'
+        }`}>
+          {filteredLogos.map(logo => (
+            <LogoCard key={logo.id} logo={logo} />
+          ))}
+        </div>
+        
+        {/* Empty state message when no logos match the filters */}
+        {filteredLogos.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            No matching logos found
+          </div>
         )}
-
-        <button
-          onClick={handleMenuToggle}
-          className="flex items-center justify-center w-6 h-6 rounded-full bg-black/5 hover:bg-black/10 transition-colors"
-        >
-          {isMenuOpen ? (
-            <X className="w-3 h-3 text-gray-800/70" />
-          ) : (
-            <Menu className="w-3 h-3 text-gray-800/70" />
-          )}
-        </button>
-
-        {!isMenuOpen && (
-          <button
-            onClick={handleLanguageChange}
-            className="text-xs font-medium text-gray-800/70 hover:text-gray-800 transition-colors"
-          >
-            {currentLanguage.toUpperCase()}
-          </button>
-        )}
-      </div>
+      </main>
     </div>
   );
 }
